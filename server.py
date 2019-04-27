@@ -12,13 +12,15 @@ class Server(object):
         self.address = '127.0.0.1'
         self.port = 9999
         self.flights = [
-            {'code': 1, 'status': 'Arrival', 'time': '03:50'},
-            {'code': 2, 'status': 'Departure', 'time': '12:50'},
-            {'code': 3, 'status': 'Arrival', 'time': '19:30'},
-            {'code': 17 ,'status': 'Departure','time' :'??:??' }
+            {'code': '1', 'status': 'Arrival', 'time': '03:50'},
+            {'code': '2', 'status': 'Departure', 'time': '12:50'},
+            {'code': '3', 'status': 'Arrival', 'time': '19:30'},
+            {'code': '4' ,'status': 'Departure','time' :'??:??' }
         ]
         self.min_read_time = 2
+        self.min_delete_time = 0
         self.min_write_time = 4
+        self.min_modify_time = 2
         self.delay=2 
 
 
@@ -44,23 +46,25 @@ class Server(object):
         return 'RERR flight does not exist' 
 
 
-    def flight_already_exists(self,flight_code):
+    def flight_index(self,flight_code):
         """
         Get flight code and returns none if it doesnt exit
-        and "exists" if it does.
+        and index of list  if it does.
 
         params:
             code:string
         """
+        index=0
         for flight in self.flights:
             if flight_code == str(flight['code']):
-               return 'exists'
+                return index
+            index=index+1
         return None
 
     
     def append_flight(self, code, status, flight_time):
         """
-        Get the flight data and if code is unique append a new dictionary
+        Gets the flight data and if code is unique append a new dictionary
         to the list.
         Returns WOK if appended or WERR if not.
         params:
@@ -71,7 +75,7 @@ class Server(object):
         with self.lock:
             # delay the write
             time.sleep(random.randrange(0, self.delay)+self.min_write_time)  
-            if self.flight_already_exists(code) is None:
+            if self.flight_index(code) is None:
                 new_flight = {
                     'code': code,
                     'status': status,
@@ -81,9 +85,47 @@ class Server(object):
                 return 'WOK'
             else:
                 return 'WERR flight already exists'
+            
+    def delete_flight(self,code):
+        """
+        Deletes a flight if the code exists
+        Returns DOK if succeed or DERR if not
+        params:
+            code: string
+        """
+        
+        with self.lock:
+            #delay
+            time.sleep(random.randrange(0, self.delay)+self.min_delete_time)
+            index=self.flight_index(code)
+            if index is None:
+                return 'DERR flight doesnt exist'
+            else:
+                del self.flights[index]
+                return 'DOK'
 
+    def modify_flight(self,code,status,flight_time):
+        """
+        Gets code and if flight exists modifies it.
+        If succeed returns MOK else MERR
+        params:
+            code: string
+            status: string
+            flight_time:string
+        """
+        with self.lock:
+            #delay
+            time.sleep(random.randrange(0, self.delay)+self.min_modify_time)
+            index=self.flight_index(code)
+            if index is None:
+                return 'MERR flight doesnt exist'
+            else:
+                self.flights[index]={'code': code ,'status': status,'time' : flight_time }
+                return 'MOK'
 
-    def return_all_Flight(self):
+        
+        
+    def return_all_flights(self):
         """
         Return a string that contains
         our database
@@ -96,6 +138,7 @@ class Server(object):
                         str(f['status'])+" "+\
                         str(f['time'])+"\n"
         return(flight_info)
+
     
     def handle_client(self, connection):
         """
@@ -116,7 +159,7 @@ class Server(object):
                 if 'EXIT'==in_msg:
                     connection.close()
                 
-                if 'READ'==in_msg[:4]:
+                elif 'READ'==in_msg[:4]:
                     try:
                         _, flight_code = in_msg.split()
                         out_msg = self.get_flight(flight_code)
@@ -124,7 +167,7 @@ class Server(object):
                         out_msg='RERR check HELP'
                     connection.sendall(out_msg.encode('utf-8'))
                     
-                if 'WRITE'== in_msg[:5]:
+                elif 'WRITE'== in_msg[:5]:
                     try:
                         _, code, status, flight_time = in_msg.split()
                         out_msg=self.append_flight(code, status, flight_time)
@@ -132,8 +175,27 @@ class Server(object):
                         out_msg='WERR check HELP'
                     connection.sendall(out_msg.encode('utf-8'))
                     
-                if 'PRINT'==in_msg:
-                    out_msg=self.return_all_Flight()
+                elif 'DATA'==in_msg[:4]:
+                    try:
+                        out_msg=self.return_all_flights()
+                    except:
+                        out_msg='DATAERR check HELP'
+                    connection.sendall(out_msg.encode('utf-8'))
+
+                elif 'MODIFY'==in_msg[:6]:
+                    try:
+                        _, code, status, flight_time = in_msg.split()
+                        out_msg=self.modify_flight(code, status, flight_time)
+                    except:
+                        out_msg='MERR check HELP'
+                    connection.sendall(out_msg.encode('utf-8'))
+                        
+                elif 'DELETE'==in_msg[:6]:
+                    try:
+                        _, code= in_msg.split()
+                        out_msg=self.delete_flight(code)
+                    except:
+                        out_msg='DERR check HELP'
                     connection.sendall(out_msg.encode('utf-8'))
             except:
                 connection.close()
