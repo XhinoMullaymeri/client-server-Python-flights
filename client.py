@@ -1,3 +1,4 @@
+#! python3
 import datetime
 import sys
 import socket
@@ -11,7 +12,7 @@ class Client():
         self.server_address = '127.0.0.1'
         self.server_port = 9999
         self.simulation_sleep_time=3
-        
+        self.client_type = 0
     def show_options(self):
         self.menu_options = {'READ':'reading from the flight table',
 		                'WRITE':'writing a new entry to the flight table',
@@ -25,6 +26,12 @@ class Client():
         for key in self.menu_options:
             print(f'\n{key} is msg code for {self.menu_options[key]}')
         print('\n')
+
+
+    def set_params_values():
+        pass
+
+
         
     def is_not_included_in_options(self,msg):
         return not msg in self.menu_options
@@ -85,15 +92,12 @@ class Client():
         """
         pass
 
-        #decides the type (writer or reader)
-        toss= random.randint(0,3)
-        if toss<3:
-            client_type=1 #reader
+        if self.client_type ==1:
             print('\nReader created!\n')
         else:
-            client_type=2 #write
             print('\nWriter created!\n')
 
+        
         input_msg='Enter your command: '
         
         self.socket.connect((self.server_address,self.server_port))
@@ -113,8 +117,10 @@ class Client():
         # list with clients commands
         commands_list=['READ ','DELETE ','WRITE ','MODIFY ']
 
+
+        time.sleep(1)#sleeps 1 sec before starting...
         #reader
-        if client_type==1:
+        if self.client_type==1:
 
             while True:
                 #READ+number(1-10) 1-10 cause we want to have codes that
@@ -150,14 +156,23 @@ class Client():
                     
                 self.handle_client_msg(out_msg)
                 
-                time.sleep(client_type*self.simulation_sleep_time)
+                time.sleep(self.client_type*self.simulation_sleep_time)
 
 
 if __name__ == "__main__":
     client = Client()
     client.show_options()
-    client.connect_with_server_user()
-    #client.connect_with_server_simulation()
+    
+    if len(sys.argv)==1:
+        client.connect_with_server_user()
+    elif len(sys.argv)==3:
+        client.simulation_sleep_time=int(sys.argv[1]) # client's type
+        client.simulation_client_type=int(sys.argv[2]) #reader sleeping time
+        client.connect_with_server_simulation()
+    else:
+        print("Read readme\nThis is not the proper way to run it\n"+
+              "!!!client.py or client.py <arg1> <arg2>!!!\n"+
+              "<arg1>=client's type <arg2> is sleep after request")
 
 
 

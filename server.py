@@ -1,9 +1,11 @@
+#! python3
 import socket
 import threading
 import json
 import time
 import random
 import datetime
+import sys
 
 class Server(object):
     def __init__(self):
@@ -18,11 +20,34 @@ class Server(object):
             {'code': '4' ,'status': 'Departure','time' :'??:??' }
         ]
         self.min_read_time = 2
-        self.min_delete_time = 0
-        self.min_write_time = 4
+        self.min_write_time = 3
+        self.min_delete_time = 2
         self.min_modify_time = 2
         self.delay=2 
 
+
+    def set_params(self):
+
+        if len(sys.argv)==6:
+            self.min_read_time = sys.argv[1] 
+            self.min_write_time = sys.argv[2]
+            self.min_delete_time = sys.argv[3]
+            self.min_modify_time = sys.argv[4]
+            self.delay=sys.argv[5]
+        elif len(sys.argv)==1:
+            #default values
+            pass
+        else:
+         print("Read readme\nThis is not the proper way to run it\n"+
+              "!!!servert.py or client.py <arg1> <arg2> <arg3> <arg4>"+
+               "<arg5>!!!\n"
+              "<arg1>=READ extra sleep time\n"+
+               "<arg2>=WRITE extra sleep time\n"+
+               "<arg3>=DELETE extra sleep time\n"+
+               "<arg4>=MODIFY extra sleep time\n"+
+               "<arg5>= general delay for every action\n")
+         sys.exit()
+        
 
     def get_flight(self, flight_code):
         """
@@ -222,4 +247,7 @@ class Server(object):
 
 if __name__ == "__main__":
     SERVER = Server()
+    SERVER.set_params()
     SERVER.start_listening()
+    
+        
